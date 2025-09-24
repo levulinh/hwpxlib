@@ -18,19 +18,45 @@ import argparse
 
 
 def check_java():
-    """Check if Java is installed."""
+    """Check if Java is installed and provide detailed information."""
     try:
         result = subprocess.run(['java', '-version'], capture_output=True, text=True)
         if result.returncode == 0:
             # Java version is in stderr for some reason
             version_info = result.stderr.split('\n')[0] if result.stderr else result.stdout.split('\n')[0]
             print(f"✓ Java is installed: {version_info.strip()}")
+            
+            # Also check JAVA_HOME and provide guidance
+            java_home = os.environ.get('JAVA_HOME')
+            if java_home:
+                print(f"✓ JAVA_HOME is set: {java_home}")
+            else:
+                print("⚠ JAVA_HOME is not set")
+                # On macOS, provide specific guidance
+                import platform
+                if platform.system() == 'Darwin':  # macOS
+                    print("  For macOS, you can set JAVA_HOME with:")
+                    print("  export JAVA_HOME=$(/usr/libexec/java_home)")
+                    try:
+                        java_home_result = subprocess.run(['/usr/libexec/java_home'], 
+                                                        capture_output=True, text=True)
+                        if java_home_result.returncode == 0:
+                            detected_java_home = java_home_result.stdout.strip()
+                            print(f"  Detected JDK location: {detected_java_home}")
+                        else:
+                            print("  Could not detect JDK location automatically")
+                    except:
+                        print("  Could not run /usr/libexec/java_home to detect JDK")
+                else:
+                    print("  Please set JAVA_HOME to your JDK installation directory")
+            
             return True
         else:
             print("✗ Java is not installed or not in PATH")
             return False
     except FileNotFoundError:
         print("✗ Java is not installed or not in PATH")
+        print("  Please install Java Development Kit (JDK) 8 or later")
         return False
 
 

@@ -56,6 +56,45 @@ python demo.py
 
 If you see any errors about missing dependencies or JAR files, the demo script will provide specific instructions on how to fix them.
 
+## Troubleshooting
+
+### macOS JVM Detection Issues
+
+On macOS, you might encounter an error like:
+```
+Error: [Errno 2] JVM DLL not found: /Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home
+```
+
+This happens when JPype finds the browser plugin JVM instead of the actual JDK. To fix this:
+
+1. **Set JAVA_HOME environment variable:**
+   ```bash
+   export JAVA_HOME=$(/usr/libexec/java_home)
+   ```
+
+2. **Add it to your shell profile** (`.bashrc`, `.zshrc`, etc.):
+   ```bash
+   echo 'export JAVA_HOME=$(/usr/libexec/java_home)' >> ~/.zshrc
+   source ~/.zshrc
+   ```
+
+3. **Verify JAVA_HOME is set correctly:**
+   ```bash
+   echo $JAVA_HOME
+   java -version
+   ```
+
+4. **Run the setup script to verify:**
+   ```bash
+   python setup.py
+   ```
+
+### Other Common Issues
+
+- **JPype1 not installed**: Run `pip install JPype1`
+- **JAR file not found**: Run `mvn clean package` in the project root
+- **Permission errors**: Make sure you have write permissions in the output directories
+
 ## Scripts
 
 ### `basic_text_extraction.py`

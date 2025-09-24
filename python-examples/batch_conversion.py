@@ -23,7 +23,7 @@ from jpype.types import *
 
 
 def setup_java_environment():
-    """Initialize JPype and setup the Java classpath."""
+    """Initialize JPype and setup the Java classpath with robust JVM detection."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
     jar_path = os.path.join(project_root, "target", "hwpxlib-1.0.7.jar")
@@ -33,7 +33,66 @@ def setup_java_environment():
                               f"Please build the project first with: mvn clean package")
     
     if not jpype.isJVMStarted():
-        jpype.startJVM(classpath=[jar_path])
+        # Try to find the correct JVM path, especially important on macOS
+        jvm_path = None
+        
+        # First, try to get JAVA_HOME from environment
+        java_home = os.environ.get('JAVA_HOME')
+        if java_home and os.path.exists(java_home):
+            # Look for the JVM library in common locations
+            possible_jvm_paths = [
+                os.path.join(java_home, 'lib', 'server', 'libjvm.dylib'),  # macOS
+                os.path.join(java_home, 'lib', 'server', 'libjvm.so'),     # Linux
+                os.path.join(java_home, 'bin', 'server', 'jvm.dll'),       # Windows
+                os.path.join(java_home, 'jre', 'lib', 'server', 'libjvm.dylib'),  # macOS older versions
+                os.path.join(java_home, 'jre', 'lib', 'server', 'libjvm.so'),     # Linux older versions
+            ]
+            
+            for path in possible_jvm_paths:
+                if os.path.exists(path):
+                    jvm_path = path
+                    break
+        
+        # If JAVA_HOME didn't work, try to detect using java command
+        if not jvm_path:
+            try:
+                import subprocess
+                # Use java -XshowSettings:properties to get java.home
+                result = subprocess.run(['java', '-XshowSettings:properties', '-version'], 
+                                      capture_output=True, text=True)
+                # Java prints properties to stderr, so check both stdout and stderr
+                output = result.stderr + result.stdout
+                if result.returncode == 0:
+                    for line in output.split('\n'):
+                        if 'java.home' in line:
+                            java_home = line.split('=')[-1].strip()
+                            # Look for JVM library
+                            possible_jvm_paths = [
+                                os.path.join(java_home, 'lib', 'server', 'libjvm.dylib'),  # macOS
+                                os.path.join(java_home, 'lib', 'server', 'libjvm.so'),     # Linux
+                                os.path.join(java_home, 'bin', 'server', 'jvm.dll'),       # Windows
+                            ]
+                            
+                            for path in possible_jvm_paths:
+                                if os.path.exists(path):
+                                    jvm_path = path
+                                    break
+                            break
+            except:
+                pass  # Fall back to default JPype detection
+        
+        # Start JVM with explicit path if found, otherwise let JPype auto-detect
+        try:
+            if jvm_path:
+                jpype.startJVM(jvm_path, classpath=[jar_path])
+            else:
+                jpype.startJVM(classpath=[jar_path])
+        except Exception as e:
+            # If JPype fails, provide helpful error message
+            raise RuntimeError(f"Failed to start JVM: {e}\n"
+                             f"This often happens on macOS when the wrong JVM is detected.\n"
+                             f"Try setting JAVA_HOME environment variable to your JDK installation.\n"
+                             f"For example: export JAVA_HOME=$(/usr/libexec/java_home)")
     
     return jar_path
 
