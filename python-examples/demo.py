@@ -13,38 +13,60 @@ import sys
 import subprocess
 
 
+def check_prerequisites():
+    """Check if all prerequisites are met before running the demo."""
+    print("Checking prerequisites...")
+    
+    # Check if JPype is available
+    try:
+        import jpype
+        print(f"✓ JPype is installed (version {jpype.__version__})")
+    except ImportError:
+        print("✗ JPype is not installed!")
+        print("  Please install it with: pip install JPype1")
+        return False
+    
+    # Check if JAR exists
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    jar_path = os.path.join(project_root, "target", "hwpxlib-1.0.7.jar")
+    
+    if not os.path.exists(jar_path):
+        print("✗ JAR file not found!")
+        print(f"  Expected location: {jar_path}")
+        print("  Please build the project first with: mvn clean package")
+        return False
+    else:
+        print(f"✓ JAR file found: {jar_path}")
+    
+    # Check for sample files
+    sample_file = os.path.join(script_dir, "examples", "sample_document.hwpx")
+    if not os.path.exists(sample_file):
+        print(f"✗ Sample file not found: {sample_file}")
+        return False
+    else:
+        print("✓ Sample files found")
+    
+    print("All prerequisites met!\n")
+    return True
+
+
 def run_demo():
     """Run demonstration of all conversion scripts."""
     print("=" * 60)
     print("HWPX to Markdown Conversion Demo")
     print("=" * 60)
     
+    # Check prerequisites first
+    if not check_prerequisites():
+        print("\nDemo cannot run due to missing prerequisites.")
+        print("Please install dependencies and build the project first.")
+        return False
+    
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # Check if JAR exists
-    project_root = os.path.dirname(script_dir)
-    jar_path = os.path.join(project_root, "target", "hwpxlib-1.0.7.jar")
-    
-    if not os.path.exists(jar_path):
-        print("Error: JAR file not found!")
-        print(f"Expected location: {jar_path}")
-        print("Please build the project first with: mvn clean package")
-        return False
-    
-    # Check for example files
-    sample_file = os.path.join(script_dir, "examples", "sample_document.hwpx")
+    # Check for additional example files
     table_file = os.path.join(script_dir, "examples", "table_document.hwpx")
-    
-    if not os.path.exists(sample_file):
-        print(f"Error: Sample file not found: {sample_file}")
-        return False
-    
-    print(f"Using JAR: {jar_path}")
-    print(f"Sample files found:")
-    print(f"  - {sample_file}")
-    if os.path.exists(table_file):
-        print(f"  - {table_file}")
-    print()
     
     # Demo 1: Basic text extraction
     print("1. Basic Text Extraction Demo")
@@ -53,7 +75,7 @@ def run_demo():
            "examples/sample_document.hwpx", "examples/demo_text_output.txt"]
     
     try:
-        result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True)
+        result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True, timeout=60)
         if result.returncode == 0:
             print("✓ Basic text extraction completed successfully")
             # Show first few lines of output
@@ -66,7 +88,15 @@ def run_demo():
                         print(f"    {line.strip()}")
         else:
             print("✗ Basic text extraction failed")
-            print(f"  Error: {result.stderr}")
+            error_msg = result.stderr.strip() if result.stderr.strip() else result.stdout.strip()
+            if error_msg:
+                print(f"  Error: {error_msg}")
+            else:
+                print(f"  Return code: {result.returncode}")
+                if result.stdout:
+                    print(f"  Stdout: {result.stdout}")
+    except subprocess.TimeoutExpired:
+        print("✗ Basic text extraction timed out")
     except Exception as e:
         print(f"✗ Failed to run basic text extraction: {e}")
     
@@ -79,12 +109,18 @@ def run_demo():
            "examples/sample_document.hwpx", "examples/demo_markdown_output.md"]
     
     try:
-        result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True)
+        result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True, timeout=60)
         if result.returncode == 0:
             print("✓ Markdown conversion completed successfully")
         else:
             print("✗ Markdown conversion failed")
-            print(f"  Error: {result.stderr}")
+            error_msg = result.stderr.strip() if result.stderr.strip() else result.stdout.strip()
+            if error_msg:
+                print(f"  Error: {error_msg}")
+            else:
+                print(f"  Return code: {result.returncode}")
+    except subprocess.TimeoutExpired:
+        print("✗ Markdown conversion timed out")
     except Exception as e:
         print(f"✗ Failed to run markdown conversion: {e}")
     
@@ -99,7 +135,7 @@ def run_demo():
                "--format-tables"]
         
         try:
-            result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True)
+            result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True, timeout=60)
             if result.returncode == 0:
                 print("✓ Table document conversion completed successfully")
                 # Show the table output
@@ -112,7 +148,13 @@ def run_demo():
                             print(f"    {line}")
             else:
                 print("✗ Table document conversion failed")
-                print(f"  Error: {result.stderr}")
+                error_msg = result.stderr.strip() if result.stderr.strip() else result.stdout.strip()
+                if error_msg:
+                    print(f"  Error: {error_msg}")
+                else:
+                    print(f"  Return code: {result.returncode}")
+        except subprocess.TimeoutExpired:
+            print("✗ Table document conversion timed out")
         except Exception as e:
             print(f"✗ Failed to run table conversion: {e}")
         
@@ -125,7 +167,7 @@ def run_demo():
            "examples/", "examples/demo_batch_output/", "--overwrite"]
     
     try:
-        result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True)
+        result = subprocess.run(cmd, cwd=script_dir, capture_output=True, text=True, timeout=120)
         if result.returncode == 0:
             print("✓ Batch conversion completed successfully")
             # List output files
@@ -137,7 +179,13 @@ def run_demo():
                     print(f"    - {file}")
         else:
             print("✗ Batch conversion failed")
-            print(f"  Error: {result.stderr}")
+            error_msg = result.stderr.strip() if result.stderr.strip() else result.stdout.strip()
+            if error_msg:
+                print(f"  Error: {error_msg}")
+            else:
+                print(f"  Return code: {result.returncode}")
+    except subprocess.TimeoutExpired:
+        print("✗ Batch conversion timed out")
     except Exception as e:
         print(f"✗ Failed to run batch conversion: {e}")
     

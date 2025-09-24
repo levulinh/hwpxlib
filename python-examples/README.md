@@ -8,18 +8,53 @@ This directory contains Python sample scripts that demonstrate how to convert HW
 2. **Python**: Python 3.6 or later
 3. **Maven**: To build the Java library
 
-## Setup
+## Quick Setup
 
-1. **Build the Java library**:
-   ```bash
-   cd ..  # Go to project root
-   mvn clean package
-   ```
+For a guided setup process, you can use the setup script:
 
-2. **Install Python dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+python setup.py --install-deps
+```
+
+This will:
+1. Check if Java and Maven are installed
+2. Build the Java library automatically  
+3. Install Python dependencies
+4. Verify everything is working
+
+## Manual Setup
+
+### Step 1: Build the Java library
+
+```bash
+cd ..  # Go to project root (where pom.xml is located)
+mvn clean package
+```
+
+This will create the JAR file at `target/hwpxlib-1.0.7.jar`.
+
+### Step 2: Install Python dependencies
+
+**Option 1: Using pip**
+```bash
+pip install -r requirements.txt
+```
+
+**Option 2: Using uv (if you have it)**
+```bash
+uv pip install -r requirements.txt
+```
+
+**Note**: The main dependency is `JPype1` which requires Java to be installed on your system.
+
+### Step 3: Verify the setup
+
+Run the demo script to verify everything is working:
+```bash
+python demo.py
+```
+
+If you see any errors about missing dependencies or JAR files, the demo script will provide specific instructions on how to fix them.
 
 ## Scripts
 
