@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+debug_*.py
+test_*.py
+
+# Output files (examples are kept, but temporary outputs can be ignored)
+examples/debug_*
+examples/demo_*
+examples/temp_*
