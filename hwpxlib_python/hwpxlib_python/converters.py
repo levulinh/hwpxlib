@@ -261,6 +261,376 @@ class MarkdownConverter:
             f.write(markdown)
 
 
+class MarkdownToHWPXConverter:
+    """
+    Convert Markdown files to HWPX format.
+    
+    This class provides functionality to convert Markdown text to HWPX files
+    with support for headings, formatting, lists, tables, and URLs.
+    """
+    
+    def __init__(self, jar_path=None):
+        """
+        Initialize the markdown to HWPX converter.
+        
+        Args:
+            jar_path (str, optional): Path to the hwpxlib JAR file
+        """
+        self.processor = HWPXProcessor(jar_path)
+        
+        # Import Java classes after JVM is started
+        self._import_java_classes()
+    
+    def _import_java_classes(self):
+        """Import required Java classes."""
+        from kr.dogfoot.hwpxlib.tool.blankfilemaker import BlankFileMaker
+        from kr.dogfoot.hwpxlib.writer import HWPXWriter
+        from kr.dogfoot.hwpxlib.object.content.section_xml.paragraph.t import NormalText
+        from kr.dogfoot.hwpxlib.object.content.section_xml.paragraph import Para, Run, T
+        import java.lang
+        
+        self.BlankFileMaker = BlankFileMaker
+        self.HWPXWriter = HWPXWriter
+        self.NormalText = NormalText
+        self.Para = Para
+        self.Run = Run
+        self.T = T
+        self.Integer = java.lang.Integer
+    
+    def convert_to_file(self, markdown_text, output_file):
+        """
+        Convert Markdown text to HWPX file.
+        
+        Args:
+            markdown_text (str): Markdown content to convert
+            output_file (str): Path to output HWPX file
+        """
+        # Create a blank HWPX file
+        hwpx_file = self.BlankFileMaker.make()
+        
+        # Parse markdown and populate HWPX content
+        self._populate_content(hwpx_file, markdown_text)
+        
+        # Write to file
+        self.HWPXWriter.toFilepath(hwpx_file, output_file)
+    
+    def convert_from_file(self, input_file, output_file):
+        """
+        Convert Markdown file to HWPX file.
+        
+        Args:
+            input_file (str): Path to input Markdown file
+            output_file (str): Path to output HWPX file
+        """
+        with open(input_file, 'r', encoding='utf-8') as f:
+            markdown_text = f.read()
+        self.convert_to_file(markdown_text, output_file)
+    
+    def _populate_content(self, hwpx_file, markdown_text):
+        """
+        Parse markdown content and populate HWPX file structure.
+        
+        Args:
+            hwpx_file: The HWPX file object to populate
+            markdown_text (str): The markdown content to parse
+        """
+        # Get the first section (created by BlankFileMaker)
+        section = hwpx_file.sectionXMLFileList().get(0)
+        
+        # Remove the default empty paragraph created by BlankFileMaker
+        section.removeAllParas()
+        
+        # Parse markdown content
+        blocks = self._parse_markdown_blocks(markdown_text)
+        
+        # Convert each block to HWPX paragraphs
+        for block in blocks:
+            self._convert_block_to_paragraph(section, block)
+    
+    def _parse_markdown_blocks(self, text):
+        """
+        Parse markdown text into logical blocks.
+        
+        Returns:
+            List of dictionaries with 'type' and 'content' keys
+        """
+        blocks = []
+        lines = text.split('\n')
+        i = 0
+        
+        while i < len(lines):
+            line = lines[i].rstrip()
+            
+            # Skip empty lines
+            if not line:
+                i += 1
+                continue
+            
+            # Headers
+            if line.startswith('#'):
+                level = len(line) - len(line.lstrip('#'))
+                if level <= 6 and line[level:level+1] == ' ':
+                    blocks.append({
+                        'type': 'heading',
+                        'level': level,
+                        'content': line[level:].strip()
+                    })
+                    i += 1
+                    continue
+            
+            # Unordered lists
+            if re.match(r'^[-*+]\s', line):
+                list_items = []
+                while i < len(lines) and re.match(r'^[-*+]\s', lines[i]):
+                    list_items.append(lines[i][2:].strip())
+                    i += 1
+                blocks.append({
+                    'type': 'unordered_list',
+                    'items': list_items
+                })
+                continue
+            
+            # Ordered lists
+            if re.match(r'^\d+\.\s', line):
+                list_items = []
+                while i < len(lines) and re.match(r'^\d+\.\s', lines[i]):
+                    list_items.append(re.sub(r'^\d+\.\s', '', lines[i]))
+                    i += 1
+                blocks.append({
+                    'type': 'ordered_list',
+                    'items': list_items
+                })
+                continue
+            
+            # Tables
+            if '|' in line:
+                table_rows = []
+                while i < len(lines) and lines[i].strip() and '|' in lines[i]:
+                    # Skip separator rows (like |---|---|)
+                    if not re.match(r'^\s*\|[\s\-|]*\|\s*$', lines[i]):
+                        row_cells = [cell.strip() for cell in lines[i].split('|')[1:-1]]
+                        table_rows.append(row_cells)
+                    i += 1
+                if table_rows:
+                    blocks.append({
+                        'type': 'table',
+                        'rows': table_rows
+                    })
+                continue
+            
+            # Regular paragraphs
+            paragraph_lines = [line]
+            i += 1
+            
+            # Collect continuation lines
+            while i < len(lines) and lines[i].strip() and not self._is_block_start(lines[i]):
+                paragraph_lines.append(lines[i].rstrip())
+                i += 1
+            
+            blocks.append({
+                'type': 'paragraph',
+                'content': ' '.join(paragraph_lines)
+            })
+        
+        return blocks
+    
+    def _is_block_start(self, line):
+        """Check if line starts a new markdown block."""
+        return (line.startswith('#') or
+                re.match(r'^[-*+]\s', line) or
+                re.match(r'^\d+\.\s', line) or
+                '|' in line)
+    
+    def _convert_block_to_paragraph(self, section, block):
+        """
+        Convert a markdown block to HWPX paragraph(s).
+        
+        Args:
+            section: The section to add paragraphs to
+            block: Dictionary with block information
+        """
+        block_type = block['type']
+        
+        if block_type == 'heading':
+            self._create_heading_paragraph(section, block['content'], block['level'])
+        elif block_type == 'paragraph':
+            self._create_text_paragraph(section, block['content'])
+        elif block_type == 'unordered_list':
+            for item in block['items']:
+                self._create_list_paragraph(section, item, bullet=True)
+        elif block_type == 'ordered_list':
+            for i, item in enumerate(block['items'], 1):
+                self._create_list_paragraph(section, item, bullet=False, number=i)
+        elif block_type == 'table':
+            self._create_table_paragraphs(section, block['rows'])
+    
+    def _create_heading_paragraph(self, section, text, level):
+        """Create a heading paragraph."""
+        para = section.addNewPara()
+        para.idAnd(str(hash(text) % 1000000000))
+        para.paraPrIDRefAnd("3")
+        para.styleIDRefAnd("0")
+        para.pageBreakAnd(False)
+        para.columnBreakAnd(False)
+        para.merged(False)
+        
+        run = para.addNewRun()
+        run.charPrIDRef("0")
+        
+        t = run.addNewT()
+        t.charPrIDRefAnd("0")
+        
+        # Add heading prefix
+        heading_text = '#' * level + ' ' + text
+        t.addText(heading_text)
+        
+        # Create line segments for proper display
+        para.createLineSegArray()
+        line_seg = para.lineSegArray().addNew()
+        line_seg.textposAnd(self.Integer(0))
+        line_seg.vertposAnd(self.Integer(0))
+        line_seg.vertsizeAnd(self.Integer(1000))
+        line_seg.textheightAnd(self.Integer(1000))
+        line_seg.baselineAnd(self.Integer(850))
+        line_seg.spacingAnd(self.Integer(600))
+        line_seg.horzposAnd(self.Integer(0))
+        line_seg.horzsizeAnd(self.Integer(42520))
+        line_seg.flags(self.Integer(393216))
+    
+    def _create_text_paragraph(self, section, text):
+        """Create a regular text paragraph with inline formatting."""
+        para = section.addNewPara()
+        para.idAnd(str(hash(text) % 1000000000))
+        para.paraPrIDRefAnd("3")
+        para.styleIDRefAnd("0")
+        para.pageBreakAnd(False)
+        para.columnBreakAnd(False)
+        para.merged(False)
+        
+        run = para.addNewRun()
+        run.charPrIDRef("0")
+        
+        # Parse inline formatting and create text runs
+        self._create_formatted_text_runs(run, text)
+        
+        # Create line segments
+        para.createLineSegArray()
+        line_seg = para.lineSegArray().addNew()
+        line_seg.textposAnd(self.Integer(0))
+        line_seg.vertposAnd(self.Integer(0))
+        line_seg.vertsizeAnd(self.Integer(1000))
+        line_seg.textheightAnd(self.Integer(1000))
+        line_seg.baselineAnd(self.Integer(850))
+        line_seg.spacingAnd(self.Integer(600))
+        line_seg.horzposAnd(self.Integer(0))
+        line_seg.horzsizeAnd(self.Integer(42520))
+        line_seg.flags(self.Integer(393216))
+    
+    def _create_formatted_text_runs(self, run, text):
+        """Create text runs with inline formatting like bold, italic, etc."""
+        # For now, create simple text runs
+        # TODO: Parse **bold**, *italic*, `code`, [links](urls)
+        
+        # Simple implementation - split on markdown formatting
+        parts = re.split(r'(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))', text)
+        
+        for part in parts:
+            if not part:
+                continue
+                
+            t = run.addNewT()
+            t.charPrIDRefAnd("0")
+            
+            if part.startswith('**') and part.endswith('**'):
+                # Bold text - for now just add as regular text with markers
+                t.addText(part)
+            elif part.startswith('*') and part.endswith('*'):
+                # Italic text - for now just add as regular text with markers
+                t.addText(part)
+            elif part.startswith('`') and part.endswith('`'):
+                # Code text - for now just add as regular text with markers
+                t.addText(part)
+            elif re.match(r'\[[^\]]+\]\([^)]+\)', part):
+                # Link - for now just add as regular text
+                t.addText(part)
+            else:
+                # Regular text
+                t.addText(part)
+    
+    def _create_list_paragraph(self, section, text, bullet=True, number=None):
+        """Create a list item paragraph."""
+        para = section.addNewPara()
+        para.idAnd(str(hash(text) % 1000000000))
+        para.paraPrIDRefAnd("3")
+        para.styleIDRefAnd("0")
+        para.pageBreakAnd(False)
+        para.columnBreakAnd(False)
+        para.merged(False)
+        
+        run = para.addNewRun()
+        run.charPrIDRef("0")
+        
+        t = run.addNewT()
+        t.charPrIDRefAnd("0")
+        
+        if bullet:
+            list_text = "• " + text
+        else:
+            list_text = f"{number}. {text}"
+        
+        t.addText(list_text)
+        
+        # Create line segments
+        para.createLineSegArray()
+        line_seg = para.lineSegArray().addNew()
+        line_seg.textposAnd(self.Integer(0))
+        line_seg.vertposAnd(self.Integer(0))
+        line_seg.vertsizeAnd(self.Integer(1000))
+        line_seg.textheightAnd(self.Integer(1000))
+        line_seg.baselineAnd(self.Integer(850))
+        line_seg.spacingAnd(self.Integer(600))
+        line_seg.horzposAnd(self.Integer(0))
+        line_seg.horzsizeAnd(self.Integer(42520))
+        line_seg.flags(self.Integer(393216))
+    
+    def _create_table_paragraphs(self, section, rows):
+        """Create table as formatted text paragraphs."""
+        # For simplicity, create table as formatted text
+        # TODO: Implement proper table objects
+        
+        for row in rows:
+            para = section.addNewPara()
+            para.idAnd(str(hash(str(row)) % 1000000000))
+            para.paraPrIDRefAnd("3")
+            para.styleIDRefAnd("0")
+            para.pageBreakAnd(False)
+            para.columnBreakAnd(False)
+            para.merged(False)
+            
+            run = para.addNewRun()
+            run.charPrIDRef("0")
+            
+            t = run.addNewT()
+            t.charPrIDRefAnd("0")
+            
+            # Join cells with tab separators
+            table_text = " | ".join(row)
+            t.addText(table_text)
+            
+            # Create line segments
+            para.createLineSegArray()
+            line_seg = para.lineSegArray().addNew()
+            line_seg.textposAnd(self.Integer(0))
+            line_seg.vertposAnd(self.Integer(0))
+            line_seg.vertsizeAnd(self.Integer(1000))
+            line_seg.textheightAnd(self.Integer(1000))
+            line_seg.baselineAnd(self.Integer(850))
+            line_seg.spacingAnd(self.Integer(600))
+            line_seg.horzposAnd(self.Integer(0))
+            line_seg.horzsizeAnd(self.Integer(42520))
+            line_seg.flags(self.Integer(393216))
+
+
 class BatchConverter:
     """
     Batch convert multiple HWPX files.

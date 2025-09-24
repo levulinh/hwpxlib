@@ -8,7 +8,7 @@ when the library is installed.
 import argparse
 import sys
 import os
-from .converters import TextExtractor, MarkdownConverter, BatchConverter
+from .converters import TextExtractor, MarkdownConverter, MarkdownToHWPXConverter, BatchConverter
 
 
 def extract_text():
@@ -81,6 +81,39 @@ Examples:
         converter = MarkdownConverter(args.jar_path, args.format_tables, args.preserve_linebreaks)
         converter.convert_to_file(args.input_file, args.output_file)
         print(f"Markdown conversion completed: {args.output_file}")
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+
+
+def convert_markdown_to_hwpx():
+    """Command-line interface for Markdown to HWPX conversion."""
+    parser = argparse.ArgumentParser(
+        description='Convert Markdown files to HWPX format',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  markdown-to-hwpx document.md output.hwpx
+  markdown-to-hwpx document.md output.hwpx --jar-path /path/to/hwpxlib.jar
+        """
+    )
+    
+    parser.add_argument('input_file', help='Input Markdown file path')
+    parser.add_argument('output_file', help='Output HWPX file path')
+    parser.add_argument('--jar-path', type=str,
+                       help='Path to hwpxlib JAR file (optional)')
+    
+    args = parser.parse_args()
+    
+    # Validate input file
+    if not os.path.exists(args.input_file):
+        print(f"Error: Input file does not exist: {args.input_file}")
+        sys.exit(1)
+    
+    try:
+        converter = MarkdownToHWPXConverter(args.jar_path)
+        converter.convert_from_file(args.input_file, args.output_file)
+        print(f"Markdown to HWPX conversion completed: {args.output_file}")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
