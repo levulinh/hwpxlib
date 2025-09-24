@@ -1,4 +1,0 @@
-[console_scripts]
-hwpx-batch = hwpxlib_python.cli:batch_convert
-hwpx-extract = hwpxlib_python.cli:extract_text
-hwpx-markdown = hwpxlib_python.cli:convert_markdown
