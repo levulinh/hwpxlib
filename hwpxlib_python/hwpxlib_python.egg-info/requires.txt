@@ -1,0 +1,7 @@
+JPype1>=1.4.1
+
+[dev]
+black
+flake8
+pytest-cov
+pytest>=6.0

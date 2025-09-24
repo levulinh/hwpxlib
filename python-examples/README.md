@@ -1,6 +1,86 @@
-# Python Examples for HWPX to Markdown Conversion
+# Python Examples and Library for HWPX to Markdown Conversion
 
-This directory contains Python sample scripts that demonstrate how to convert HWPX files to Markdown format using JPype to run the Java hwpxlib within Python.
+This directory now contains both example scripts and a full Python library for HWPX to Markdown conversion using JPype.
+
+## 🎉 New: Python Library Available!
+
+We've created a proper Python library called `hwpxlib-python` that provides a clean, Pythonic API for working with HWPX files.
+
+### Library Installation
+
+```bash
+# Install from the hwpxlib_python directory
+cd hwpxlib_python
+pip install -e .
+```
+
+### Library Usage
+
+```python
+from hwpxlib_python import TextExtractor, MarkdownConverter, BatchConverter
+
+# Simple text extraction
+extractor = TextExtractor()
+text = extractor.extract_to_string('document.hwpx')
+
+# Markdown conversion
+converter = MarkdownConverter()
+markdown = converter.convert_to_string('document.hwpx')
+
+# Batch processing
+batch_converter = BatchConverter()
+success, total = batch_converter.convert_directory('input/', 'output/')
+```
+
+### CLI Commands
+
+The library also provides convenient command-line tools:
+
+```bash
+# Extract text
+hwpx-extract document.hwpx output.txt
+
+# Convert to markdown
+hwpx-markdown document.hwpx output.md
+
+# Batch convert
+hwpx-batch input_folder output_folder
+```
+
+## Example Scripts (Legacy)
+
+The original example scripts are still available for reference and learning:
+
+- `basic_text_extraction.py` - Simple text extraction script
+- `hwpx_to_markdown.py` - Markdown conversion with table formatting
+- `batch_conversion.py` - Batch processing script
+- `demo.py` - Comprehensive demonstration
+- `setup.py` - Environment setup script
+
+## Which Should You Use?
+
+- **For production use**: Use the `hwpxlib-python` library - it's cleaner, more maintainable, and easier to integrate
+- **For learning/examples**: The example scripts are still useful to understand how JPype integration works
+- **For quick tasks**: Both work fine, but the CLI tools from the library are more convenient
+
+## Migration Guide
+
+If you've been using the example scripts, here's how to migrate to the library:
+
+**Old way:**
+```python
+from basic_text_extraction import extract_text_from_hwpx
+text = extract_text_from_hwpx('file.hwpx', 'output.txt')
+```
+
+**New way:**
+```python
+from hwpxlib_python import TextExtractor
+extractor = TextExtractor()
+extractor.extract_to_file('file.hwpx', 'output.txt')
+# or just get the string
+text = extractor.extract_to_string('file.hwpx')
+```
 
 ## Prerequisites
 
