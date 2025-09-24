@@ -6,6 +6,12 @@ A Python library for converting HWPX (Hancom Office) files to various formats us
 
 - **Easy-to-use API**: Clean, Pythonic interface for HWPX file processing
 - **Multiple output formats**: Support for plain text and Markdown conversion
+- **Markdown to HWPX conversion**: Convert Markdown files to HWPX format with support for:
+  - Headings (H1-H6)
+  - Text formatting (bold, italic, code)
+  - Lists (bullet points and numbered)
+  - Tables
+  - Links and URLs
 - **Table handling**: Intelligent table detection and formatting for Markdown output
 - **Batch processing**: Convert multiple files at once with directory traversal
 - **Cross-platform**: Works on Windows, macOS, and Linux
@@ -37,17 +43,21 @@ pip install -e .
 ### Basic Usage
 
 ```python
-from hwpxlib_python import HWPXProcessor, MarkdownConverter, TextExtractor
+from hwpxlib_python import HWPXProcessor, MarkdownConverter, MarkdownToHWPXConverter, TextExtractor
 
 # Simple text extraction
 extractor = TextExtractor()
 text = extractor.extract_to_string('document.hwpx')
 print(text)
 
-# Convert to Markdown
+# Convert HWPX to Markdown
 converter = MarkdownConverter()
 markdown = converter.convert_to_string('document.hwpx')
 print(markdown)
+
+# Convert Markdown to HWPX
+md_to_hwpx = MarkdownToHWPXConverter()
+md_to_hwpx.convert_from_file('document.md', 'output.hwpx')
 
 # Using the core processor
 processor = HWPXProcessor()
@@ -58,7 +68,7 @@ text = processor.extract_text()
 ### Advanced Usage
 
 ```python
-from hwpxlib_python import MarkdownConverter, BatchConverter
+from hwpxlib_python import MarkdownConverter, MarkdownToHWPXConverter, BatchConverter
 
 # Markdown conversion with options
 converter = MarkdownConverter(
@@ -66,6 +76,21 @@ converter = MarkdownConverter(
     preserve_linebreaks=False
 )
 converter.convert_to_file('input.hwpx', 'output.md')
+
+# Convert Markdown to HWPX
+md_converter = MarkdownToHWPXConverter()
+
+# From markdown string
+markdown_text = """
+# My Document
+This is **bold** and this is *italic*.
+- Item 1
+- Item 2
+"""
+md_converter.convert_to_file(markdown_text, 'output.hwpx')
+
+# From markdown file
+md_converter.convert_from_file('input.md', 'output.hwpx')
 
 # Batch conversion
 batch_converter = BatchConverter()
@@ -94,6 +119,13 @@ hwpx-extract document.hwpx output.txt --para-head
 ```bash
 hwpx-markdown document.hwpx output.md
 hwpx-markdown document.hwpx output.md --no-format-tables
+```
+
+### Convert Markdown to HWPX
+
+```bash
+markdown-to-hwpx document.md output.hwpx
+markdown-to-hwpx document.md output.hwpx --jar-path /path/to/hwpxlib.jar
 ```
 
 ### Batch conversion
@@ -139,6 +171,30 @@ markdown = converter.convert_to_string(filepath)
 converter.convert_to_file(input_file, output_file)
 ```
 
+### MarkdownToHWPXConverter
+
+Convert Markdown files to HWPX format with support for headings, formatting, lists, tables, and links.
+
+```python
+converter = MarkdownToHWPXConverter(jar_path=None)
+
+# Convert from markdown string
+converter.convert_to_file(markdown_text, output_file)
+
+# Convert from markdown file  
+converter.convert_from_file(input_file, output_file)
+```
+
+**Supported Markdown Features:**
+- Headings (H1-H6): `# Header`
+- **Bold text**: `**bold**` 
+- *Italic text*: `*italic*`
+- `Inline code`: `` `code` ``
+- Links: `[text](url)`
+- Bullet lists: `- item`
+- Numbered lists: `1. item`
+- Tables: `| col1 | col2 |`
+
 ### BatchConverter
 
 Batch convert multiple HWPX files.
@@ -175,6 +231,36 @@ export JAVA_HOME=$(/usr/libexec/java_home)
 Add this to your shell profile (`.bashrc`, `.zshrc`, etc.) for persistence.
 
 ## Examples
+
+### Converting Markdown to HWPX
+
+```python
+from hwpxlib_python import MarkdownToHWPXConverter
+
+# Initialize converter
+converter = MarkdownToHWPXConverter()
+
+# Convert from markdown string
+markdown_content = """
+# My Document
+
+This document contains **bold text** and *italic text*.
+
+## Features
+- Lists work great
+- Tables are supported
+- Links like [this](https://example.com) work too
+
+| Name | Value |
+|------|-------|
+| Test | 123   |
+"""
+
+converter.convert_to_file(markdown_content, 'output.hwpx')
+
+# Convert from file
+converter.convert_from_file('input.md', 'output.hwpx')
+```
 
 ### Converting Korean Documents
 

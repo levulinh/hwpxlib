@@ -65,6 +65,7 @@ setup(
         'console_scripts': [
             'hwpx-extract=hwpxlib_python.cli:extract_text',
             'hwpx-markdown=hwpxlib_python.cli:convert_markdown',
+            'markdown-to-hwpx=hwpxlib_python.cli:convert_markdown_to_hwpx',
             'hwpx-batch=hwpxlib_python.cli:batch_convert',
         ],
     },
