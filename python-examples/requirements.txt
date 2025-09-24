@@ -1,0 +1,3 @@
+# Python dependencies for HWPX to Markdown conversion scripts
+JPype1>=1.4.1
+markdown>=3.4.0
